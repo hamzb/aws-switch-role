@@ -5,6 +5,7 @@ import sys
 import argparse
 import ConfigParser
 import os
+import boto3
 
 config_dir = os.path.expanduser("~") + '/.aws-switch-role'
 config_file = config_dir + '/config'
@@ -15,17 +16,12 @@ def check_file(file_name):
 	response = os.path.isfile(file_name)
 	return response
 
-#def parse_main(file_name):
-
 def set_option(parser, section, option, value):
 	if not value:
 		if parser.has_option(section, option):
 			parser.remove_option(section, option)
 	else:
 		parser.set(section, option, value)
-
-
-
 
 def setDefault(args):
 	response = check_file(config_file)
@@ -51,8 +47,7 @@ def setDefault(args):
 def listAccounts(args):
 	response = check_file(config_file)
 	if not response:
-		print 'Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters'
-		exit(1)
+		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
 
 def setAccount(args):
 	response = check_file(config_file)
@@ -83,8 +78,8 @@ def setAccount(args):
 def removeAccount(args):
 	response = check_file(config_file)
 	if not response:
-		print 'Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters'
-		exit(1)
+		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
+		
 	parser = ConfigParser.SafeConfigParser()
 	parser.read(config_file)
 	account = raw_input('Enter the account name: ')
@@ -100,17 +95,39 @@ def removeAccount(args):
 def assumeRole(args):
 	response = check_file(config_file)
 	if not response:
-		print 'Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters'
-		exit(1)
-	if not check_file(config_file):
-		print 'Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters'
-		exit(1)
-	else:
-		mfa_code = input("Enter your MFA code: ")
-		if args.acc_id:
-			print args.acc_id
-			response = assume_iam_role(role,session,mfa_id,str(mfa_code))
-			print response
+		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
+	parser = ConfigParser.SafeConfigParser()
+	parser.read(config_file)
+	if parser.has_option('main', 'iam_role'):
+		iam_role = parser.get('main', 'iam_role')
+	if parser.has_option('main', 'mfa_device'):
+		mfa_device = parser.get('main', 'mfa_device')
+	if parser.has_option('main', 'use_mfa'):
+		use_mfa = ('main', 'use_mfa')
+	account = args.acc
+	if not parser.has_section(account):
+		raise ValueError('Account is invalid')
+	if parser.has_option(account, 'iam_role'):
+		iam_role = parser.get(account, 'iam_role')
+	if parser.has_option(account, 'mfa_device'):
+		mfa_device = parser.get(account, 'mfa_device')
+	if parser.has_option(account, 'use_mfa'):
+		use_mfa = (account, 'use_mfa')
+	if parser.has_option(account, 'account_id'):
+		account_id = parser.get(account, 'account_id')
+	role = 'arn:aws:iam::' + account_id + ':role/' + iam_role
+	session = account
+	client = boto3.client('sts')
+	mfa_code = raw_input('Enter your MFA code: ')
+	try:
+		response = client.assume_role(RoleArn=role, RoleSessionName=session, SerialNumber=mfa_device, TokenCode=mfa_code)
+		print 'Access Key Id: ' + response['Credentials']['AccessKeyId']
+		print 'Secret Access Key: ' + response['Credentials']['SecretAccessKey']
+		print 'Session Token: '  + response['Credentials']['SessionToken']
+
+	except Exception as err:
+		raise ValueError(format(err))
+
 
 def showStatus(args):
 	print 'creds status'
