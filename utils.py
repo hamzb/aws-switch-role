@@ -19,5 +19,4 @@ def assume_iam_role(iam_role,session,mfa_id,mfa_code):
 	except Exception as err:
 		raise ValueError(format(err))
 
-		
 
