@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-
-from utils import *
 import sys
 import argparse
 import ConfigParser
@@ -9,8 +7,6 @@ import boto3
 
 config_dir = os.path.expanduser("~") + '/.aws-switch-role'
 config_file = config_dir + '/config'
-logger = set_logger()
-
 
 def check_file(file_name):
 	response = os.path.isfile(file_name)
@@ -79,7 +75,7 @@ def removeAccount(args):
 	response = check_file(config_file)
 	if not response:
 		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
-		
+
 	parser = ConfigParser.SafeConfigParser()
 	parser.read(config_file)
 	account = raw_input('Enter the account name: ')
@@ -129,10 +125,10 @@ def assumeRole(args):
 		raise ValueError(format(err))
 
 
+
 def showStatus(args):
 	print 'creds status'
 
-		
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title='sub-commands', description='actions to execute')
