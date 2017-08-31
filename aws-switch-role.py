@@ -5,8 +5,6 @@ import ConfigParser
 import os
 import boto3
 import json
-import datetime
-from dateutil.tz import tzutc
 
 config_dir = os.path.expanduser("~") + '/.aws-switch-role'
 config_file = config_dir + '/config'
