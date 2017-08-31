@@ -4,6 +4,9 @@ import argparse
 import ConfigParser
 import os
 import boto3
+import json
+import datetime
+from dateutil.tz import tzutc
 
 config_dir = os.path.expanduser("~") + '/.aws-switch-role'
 config_file = config_dir + '/config'
@@ -40,7 +43,7 @@ def setDefault(args):
 		parser.write(file)
 
 
-def listAccounts(args):
+def listAccount(args):
 	response = check_file(config_file)
 	if not response:
 		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
@@ -94,12 +97,15 @@ def assumeRole(args):
 		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
 	parser = ConfigParser.SafeConfigParser()
 	parser.read(config_file)
+	iam_role = ''
+	mfa_device = ''
+	use_mfa = ''
 	if parser.has_option('main', 'iam_role'):
 		iam_role = parser.get('main', 'iam_role')
 	if parser.has_option('main', 'mfa_device'):
 		mfa_device = parser.get('main', 'mfa_device')
 	if parser.has_option('main', 'use_mfa'):
-		use_mfa = ('main', 'use_mfa')
+		use_mfa = parser.get('main', 'use_mfa')
 	account = args.acc
 	if not parser.has_section(account):
 		raise ValueError('Account is invalid')
@@ -108,21 +114,25 @@ def assumeRole(args):
 	if parser.has_option(account, 'mfa_device'):
 		mfa_device = parser.get(account, 'mfa_device')
 	if parser.has_option(account, 'use_mfa'):
-		use_mfa = (account, 'use_mfa')
+		use_mfa = parser.get(account, 'use_mfa')
 	if parser.has_option(account, 'account_id'):
 		account_id = parser.get(account, 'account_id')
 	role = 'arn:aws:iam::' + account_id + ':role/' + iam_role
 	session = account
 	client = boto3.client('sts')
-	mfa_code = raw_input('Enter your MFA code: ')
-	try:
-		response = client.assume_role(RoleArn=role, RoleSessionName=session, SerialNumber=mfa_device, TokenCode=mfa_code)
-		print 'Access Key Id: ' + response['Credentials']['AccessKeyId']
-		print 'Secret Access Key: ' + response['Credentials']['SecretAccessKey']
-		print 'Session Token: '  + response['Credentials']['SessionToken']
-
-	except Exception as err:
-		raise ValueError(format(err))
+	if use_mfa != 'yes':
+		try:
+			response = client.assume_role(RoleArn=role, RoleSessionName=session)
+			print json.dumps({'Credentials':{'Account': account, 'AccessKeyId': response['Credentials']['AccessKeyId'], 'SecretAccessKey': response['Credentials']['SecretAccessKey'], 'SessionToken': response['Credentials']['SessionToken']}})
+		except Exception as err:
+			raise ValueError(format(err))	
+	else:
+		mfa_code = raw_input('Enter your MFA code: ')
+		try:
+			response = client.assume_role(RoleArn=role, RoleSessionName=session, SerialNumber=mfa_device, TokenCode=mfa_code)
+			print json.dumps({'Credentials':{'Account': account, 'AccessKeyId': response['Credentials']['AccessKeyId'], 'SecretAccessKey': response['Credentials']['SecretAccessKey'], 'SessionToken': response['Credentials']['SessionToken']}})
+		except Exception as err:
+			raise ValueError(format(err))
 
 
 
@@ -136,8 +146,9 @@ subparsers = parser.add_subparsers(title='sub-commands', description='actions to
 parser_set_default = subparsers.add_parser('set-default', help='sets default configuration')
 parser_set_default.set_defaults(func=setDefault)
 
-paser_list_accounts = subparsers.add_parser('list-accounts', help='lists the AWS accounts')
-paser_list_accounts.set_defaults(func=listAccounts)
+parser_list_account = subparsers.add_parser('list-account', help='lists the AWS accounts')
+parser_list_account.set_defaults(func=listAccount)
+parser_list_account.add_argument('--account', dest='acc', help='account you want to list its configuration. Values could be "all" or the account alias')
 
 parser_set_account = subparsers.add_parser('set-account', help='Adds or modifys the settings of an AWS account')
 parser_set_account.set_defaults(func=setAccount)
@@ -147,9 +158,7 @@ parser_remove_account.set_defaults(func=removeAccount)
 
 parser_assume_role = subparsers.add_parser('assume-role', help='assumes the AWS role of the specified AWS account')
 parser_assume_role.set_defaults(func=assumeRole)
-exGroup = parser_assume_role.add_mutually_exclusive_group()
-exGroup.add_argument('--account-id', dest='acc_id', help='Account ID of the AWS account you want to access')
-exGroup.add_argument('--account', dest='acc', help='Alias of the AWS Account you want to access')
+parser_assume_role.add_argument('--account', dest='acc', help='Alias of the AWS Account you want to access')
 
 parser_status = subparsers.add_parser('status', help='shows the status of AWS credentials')
 parser_status.set_defaults(func=showStatus)
