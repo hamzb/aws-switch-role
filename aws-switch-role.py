@@ -41,11 +41,6 @@ def setDefault(args):
 		parser.write(file)
 
 
-def listAccount(args):
-	response = check_file(config_file)
-	if not response:
-		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
-
 def setAccount(args):
 	response = check_file(config_file)
 	if not response:
@@ -72,22 +67,43 @@ def setAccount(args):
 		parser.write(file)
 
 
+def listAccount(args):
+	response = check_file(config_file)
+	if not response:
+		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
+	parser = ConfigParser.SafeConfigParser()
+	parser.read(config_file)
+	account = args.acc
+	if account == 'all':
+		for section in parser.sections():
+			print "[{0}]".format(section)
+			for name, value in parser.items(section):
+				print('{} = {}'.format(name, value))
+			print "\n"
+	else:
+		if not parser.has_section(account):
+			raise ValueError('Account does not exist')
+		print "[{0}]".format(account)
+		for name, value in parser.items(account):
+				print('{} = {}'.format(name, value))
+
+
+
 def removeAccount(args):
 	response = check_file(config_file)
 	if not response:
 		raise ValueError('Couldnt find config file ' + config_file + '. Make sure to run aws-switch-role set-default to generate it and set the default parameters')
-
 	parser = ConfigParser.SafeConfigParser()
 	parser.read(config_file)
-	account = raw_input('Enter the account name: ')
+	account = args.acc
 	if not account:
 		raise ValueError('Account name is invalid')
-	if parser.has_section(account):
-		parser.remove_section(account)
+	if not parser.has_section(account):
+		raise ValueError('Account does not exist')
 	else:
-		print 'Account ' + account + ' does not exist'
-	with open(config_file, 'wb') as file:
-		parser.write(file)
+		parser.remove_section(account)
+		with open(config_file, 'wb') as file:
+			parser.write(file)
 
 def assumeRole(args):
 	response = check_file(config_file)
@@ -125,17 +141,15 @@ def assumeRole(args):
 		except Exception as err:
 			raise ValueError(format(err))	
 	else:
-		mfa_code = raw_input('Enter your MFA code: ')
-		try:
-			response = client.assume_role(RoleArn=role, RoleSessionName=session, SerialNumber=mfa_device, TokenCode=mfa_code)
-			print json.dumps({'Credentials':{'Account': account, 'AccessKeyId': response['Credentials']['AccessKeyId'], 'SecretAccessKey': response['Credentials']['SecretAccessKey'], 'SessionToken': response['Credentials']['SessionToken']}})
-		except Exception as err:
-			raise ValueError(format(err))
-
-
-
-def showStatus(args):
-	print 'creds status'
+		if not mfa_device:
+			raise ValueError("No MFA device found. If MFA is not required, make sure to turn it off. Otherwise, please set an MFA device in the main configuration section or in {0} account configuration".format(account))
+		else:
+			mfa_code = raw_input('Enter your MFA code: ')
+			try:
+				response = client.assume_role(RoleArn=role, RoleSessionName=session, SerialNumber=mfa_device, TokenCode=mfa_code)
+				print json.dumps({'Credentials':{'Account': account, 'AccessKeyId': response['Credentials']['AccessKeyId'], 'SecretAccessKey': response['Credentials']['SecretAccessKey'], 'SessionToken': response['Credentials']['SessionToken']}})
+			except Exception as err:
+				raise ValueError(format(err))
 
 
 parser = argparse.ArgumentParser()
@@ -146,24 +160,21 @@ parser_set_default.set_defaults(func=setDefault)
 
 parser_list_account = subparsers.add_parser('list-account', help='lists the AWS accounts')
 parser_list_account.set_defaults(func=listAccount)
-parser_list_account.add_argument('--account', dest='acc', help='account you want to list its configuration. Values could be "all" or the account alias')
+parser_list_account.add_argument('--account', dest='acc', default='all', help='account you want to list its configuration. Values could be "all" or the account alias')
 
 parser_set_account = subparsers.add_parser('set-account', help='Adds or modifys the settings of an AWS account')
 parser_set_account.set_defaults(func=setAccount)
 
 parser_remove_account = subparsers.add_parser('remove-account', help='removes an AWS account from configuration')
 parser_remove_account.set_defaults(func=removeAccount)
+parser_remove_account.add_argument('--account', dest='acc', default='all', help='account you want to list its configuration. Values could be "all" or the account alias')
 
 parser_assume_role = subparsers.add_parser('assume-role', help='assumes the AWS role of the specified AWS account')
 parser_assume_role.set_defaults(func=assumeRole)
 parser_assume_role.add_argument('--account', dest='acc', help='Alias of the AWS Account you want to access')
-
-parser_status = subparsers.add_parser('status', help='shows the status of AWS credentials')
-parser_status.set_defaults(func=showStatus)
 
 args = parser.parse_args()
 try:
 	args.func(args)
 except Exception as err:
 	print str(err)
-
