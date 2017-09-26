@@ -34,9 +34,11 @@ def setDefault(args):
 	mfa_device = raw_input('Enter your default MFA device ID: ')
 	iam_role = raw_input('Enter the default IAM role name you will be assuming: ')
 	use_mfa = raw_input('Is MFA required by default? [yes/no]: ')
+	default_profile = raw_input('Default IAM Profile: ')
 	set_option(parser, 'main', 'mfa_device', mfa_device)
 	set_option(parser, 'main', 'iam_role', iam_role)
 	set_option(parser, 'main', 'use_mfa', use_mfa)
+	set_option(parser, 'main', 'default_profile', default_profile)
 	with open(config_file, 'w') as file:
 		parser.write(file)
 
@@ -63,6 +65,8 @@ def setAccount(args):
 	set_option(parser, account, 'mfa_device', mfa_device)
 	use_mfa = raw_input('Does this account require mfa? [yes/no] ')
 	set_option(parser, account, 'use_mfa', use_mfa)
+	default_profile = raw_input('Default IAM Profile: ')
+	set_option(parser, 'main', 'default_profile', default_profile)
 	with open(config_file, 'wb') as file:
 		parser.write(file)
 
@@ -120,6 +124,8 @@ def assumeRole(args):
 		mfa_device = parser.get('main', 'mfa_device')
 	if parser.has_option('main', 'use_mfa'):
 		use_mfa = parser.get('main', 'use_mfa')
+	if parser.has_option('main', 'default_profile'):
+		default_profile = parser.get('main', 'default_profile')
 	account = args.acc
 	if not parser.has_section(account):
 		raise ValueError('Account is invalid')
@@ -131,9 +137,13 @@ def assumeRole(args):
 		use_mfa = parser.get(account, 'use_mfa')
 	if parser.has_option(account, 'account_id'):
 		account_id = parser.get(account, 'account_id')
+	if parser.has_option(account, 'default_profile'):
+		default_profile = parser.get(account, 'default_profile')
+
 	role = 'arn:aws:iam::' + account_id + ':role/' + iam_role
 	session = account
-	client = boto3.client('sts')
+	iam_session = boto3.Session(profile_name=default_profile)
+	client = iam_session.client('sts')
 	if use_mfa != 'yes':
 		try:
 			response = client.assume_role(RoleArn=role, RoleSessionName=session)
