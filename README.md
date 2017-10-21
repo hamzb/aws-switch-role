@@ -1,5 +1,3 @@
-<snippet>
-  <content><![CDATA[
 # aws-switch-role
 
 # Description
@@ -19,11 +17,11 @@ sub-commands:
   actions to execute
 
   {set-default,list-account,set-account,remove-account,assume-role}
-    - set-default         sets default configuration
-    - list-account        lists the AWS accounts
-    - set-account         Adds or modifys the settings of an AWS account
-    - remove-account      removes an AWS account from configuration
-    - assume-role         assumes the AWS role of the specified AWS account
+    set-default         sets default configuration
+    list-account        lists the AWS accounts
+    set-account         Adds or modifys the settings of an AWS account
+    remove-account      removes an AWS account from configuration
+    assume-role         assumes the AWS role of the specified AWS account
 
 To use aws-switch-role utility, you should start by setting your configuration file. The location of this file is $HOME/.aws-switch-role/config. It contains a main section for the default settings, and a section for each AWS account you want to define. 
 
@@ -63,7 +61,3 @@ To switch to an AWS account, run the utility as follow: aws-switch-role.py assum
 - AWS Secret Access key
 - AWS STS Token
 - Account Name
-
-]]></content>
-  <tabTrigger>readme</tabTrigger>
-</snippet>
