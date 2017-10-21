@@ -2,7 +2,7 @@
   <content><![CDATA[
 # aws-switch-role
 
-TODO: aws-swtich-role is a Python utility that makes is easy for you to assume AWS roles in different AWS accounts. It allows you to setup and manage a config file containing your AWS accounts information, and then switch to those accounts as you please. This utility uses AWS STS API.
+aws-swtich-role is a Python utility that makes is easy for you to assume AWS roles in different AWS accounts. It allows you to setup and manage a config file containing your AWS accounts information, and then switch to those accounts as you please. This utility uses AWS STS API.
 
 ## Installation
 In Progress
@@ -11,12 +11,18 @@ usage: aws-switch-role.py [-h]
                           {set-default,list-account,set-account,remove-account,assume-role}
                           ...
 
-aws-switch-role can perform the following actions:
-- set-default: configures the general settings in the config file
-- list-account: lists the AWS accounts set in your config file
-- set-account: configures the settings specific to an AWS account
-- remove-account: removes an AWS account from your configuration file
-- assume-role: assumes the role of the specified AWS account
+optional arguments:
+  -h, --help            show this help message and exit
+
+sub-commands:
+  actions to execute
+
+  {set-default,list-account,set-account,remove-account,assume-role}
+    set-default         sets default configuration
+    list-account        lists the AWS accounts
+    set-account         Adds or modifys the settings of an AWS account
+    remove-account      removes an AWS account from configuration
+    assume-role         assumes the AWS role of the specified AWS account
 
 To use aws-switch-role utility, you should start by setting your configuration file. The location of this file is $HOME/.aws-switch-role/config. It contains a main section for the default settings, and a section for each AWS account you want to define. 
 
