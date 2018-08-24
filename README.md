@@ -23,7 +23,7 @@ sub-commands:
     remove-account      removes an AWS account from configuration  
     assume-role         assumes the AWS role of the specified AWS account  
 
-To use aws-switch-role utility, you should start by setting your configuration file. The location of this file is $HOME/.aws-switch-role/config. It contains a main section for the default settings, and a section for each AWS account you want to define. 
+To use aws-switch-role utility, you should start by setting a configuration file. The location of this file is $HOME/.aws-switch-role/config. It contains a main section for the default settings, and a section for each AWS account you want to define. 
 
 The settings you can configure for the main section are the followings:
 - use_mfa [yes/no]: Does the account to which you are switching require mfa?
